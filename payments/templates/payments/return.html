@@ -1,0 +1,31 @@
+{% extends "payments/base.html" %}
+{% block title %}Payment Result — UChat{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white rounded-lg shadow p-6">
+  <h2 class="text-2xl font-semibold mb-4">Payment Result</h2>
+
+  <div class="mb-4">
+    <h3 class="text-sm font-medium text-gray-600">Returned payload</h3>
+    <pre class="bg-gray-100 p-3 rounded text-sm overflow-x-auto">{{ payload|safe }}</pre>
+  </div>
+
+  {% if verify %}
+  <div class="mb-4">
+    <h3 class="text-sm font-medium text-gray-600">Verification result</h3>
+    <pre class="bg-gray-100 p-3 rounded text-sm overflow-x-auto">{{ verify|safe }}</pre>
+  </div>
+  {% endif %}
+
+  <div class="mt-6 flex gap-3">
+    <a href="{% url 'payments:plans' %}" class="px-4 py-2 rounded border text-sm">Back to plans</a>
+    {% if verify %}
+      {% if verify.response_status == "A" or verify.payment_result.response_status == "A" %}
+        <span class="px-4 py-2 bg-green-100 border border-green-200 text-green-800 rounded text-sm">Payment successful ✅</span>
+      {% else %}
+        <span class="px-4 py-2 bg-red-100 border border-red-200 text-red-800 rounded text-sm">Payment not successful ❌</span>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{% block title %}UChat — Payments{% endblock %}</title>
+
+    <!-- Tailwind CDN (quick prototype) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      /* small custom tweaks */
+      .container {
+        max-width: 1000px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 1.25rem;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <header class="bg-white shadow-sm">
+      <div class="container flex items-center justify-between py-4">
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center text-white font-bold"
+          >
+            U
+          </div>
+          <div>
+            <h1 class="text-lg font-semibold">UChat</h1>
+            <p class="text-sm text-gray-500">Subscription & Payments</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mt-8">{% block content %}{% endblock %}</main>
+
+    <footer class="mt-12 py-8 text-center text-sm text-gray-500">
+      © {{ now.year }} UChat — Payment Integration
+    </footer>
+  </body>
+</html>
