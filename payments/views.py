@@ -1,34 +1,91 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
-from django.urls import reverse
-from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 
 from .models import Plan, Order
-from .utils.paytabs import create_pay_page
+from .utils.paytabs import create_pay_page, verify_transaction
+from .utils.uchat import change_plan
 
+import requests
 import logging
 
 logger = logging.getLogger("payments")
 
 
-def plans_list(request):
-    plans = Plan.objects.all()
-    return render(request, "payments/plans.html", {"plans": plans})
+def checkout(request):
+    workspace_id = request.GET.get("workspace_id")
+    owner_email = request.GET.get("owner_email")
 
+    plans = requests.get(
+        f"{settings.UCHAT_BASE_URL}/plans",
+        headers={
+            "Authorization": f"Bearer {settings.UCHAT_TOKEN}",
+        },
+    ).json()
 
-def subscribe(request, plan_slug):
-    plan = get_object_or_404(Plan, slug=plan_slug)
-    order = Order.objects.create(plan=plan, amount=plan.price, currency=plan.currency)
+    if plans.get("status", False) == "ok":
+        plans = plans["data"]
 
-    customer = {
-        "first_name": "Test",
-        "last_name": "User",
-        "email": "test@example.com",
-        "phone": "0000000000",
+    PRICES_DICT = {
+        0: 0,
+        10: 36.6,
+        30: 100,
+        60: 133.3,
+        100: 200,
+        110: 332.6,
     }
 
-    data = create_pay_page(order, customer)
+    for plan in plans:
+        plan["price"] = int(float(PRICES_DICT.get(plan["price"], 1000_000)) * 1500)
+        p = Plan.objects.filter(pk=plan["id"])
+        if p:
+            p.update(
+                name=plan["name"],
+                price=plan["price"],
+                bot_users=plan["bot_users"],
+                members=plan["members"],
+                is_yearly=plan["is_yearly"],
+            )
+        else:
+            Plan.objects.create(
+                plan_id=plan["id"],
+                name=plan["name"],
+                price=plan["price"],
+                bot_users=plan["bot_users"],
+                members=plan["members"],
+                is_yearly=plan["is_yearly"],
+            )
+
+    return render(
+        request,
+        "payments/checkout.html",
+        {
+            "workspace_id": workspace_id,
+            "owner_email": owner_email,
+            "plans": plans,
+        },
+    )
+
+
+def subscribe(request, plan_id):
+    workspace_id = request.GET.get("workspace_id")
+    owner_email = request.GET.get("owner_email")
+    plan = get_object_or_404(Plan, plan_id=plan_id)
+    order = Order.objects.create(
+        plan=plan,
+        amount=plan.price,
+        workspace_id=workspace_id,
+        owner_email=owner_email,
+    )
+    if plan.price == 0:
+        workspace_id = change_plan(order=order)
+        order.workspace_id = workspace_id
+        order.status = "paid"
+        order.save()
+        return render(request, "payments/success.html", {"order": order, "plan": plan})
+
+    data = create_pay_page(order)
     order.raw_response = data
     order.save()
 
@@ -37,10 +94,8 @@ def subscribe(request, plan_slug):
     )
     if redirect_url:
         return redirect(redirect_url)
+
     return HttpResponse("Error creating payment session")
-
-
-from .utils.paytabs import create_pay_page, verify_transaction
 
 
 @csrf_exempt
@@ -48,81 +103,33 @@ def paytabs_return(request):
     payload = request.POST.dict() if request.method == "POST" else request.GET.dict()
     tran_ref = payload.get("tran_ref") or payload.get("transaction_id")
 
+    logger.info("PayTabs return payload: %s", payload)
+
     order = None
     result = None
     if tran_ref:
         try:
             result = verify_transaction(tran_ref)
-
-            logger.info("PayTabs return payload: %s", payload)
             if result:
                 logger.info("PayTabs verified result: %s", result)
 
-            # استخرج الـ order_id من custom_payment_name لو موجود
-            custom = result.get("custom_payment_name") or ""
-            if custom.startswith("UChat-"):
-                order_id = int(custom.split("-")[1])
-                order = Order.objects.filter(pk=order_id).first()
-                if order:
-                    status = result.get("response_status") or result.get(
-                        "payment_result", {}
-                    ).get("response_status")
-                    if status in ("A", "captured", "Paid", "CAPTURED"):
-                        order.status = "paid"
-                    else:
-                        order.status = "failed"
-                    order.paytabs_transaction_id = tran_ref
-                    order.raw_response = result
-                    order.save()
-        except Exception as e:
-            result = {"error": str(e)}
-
-    return render(
-        request, "payments/return.html", {"payload": payload, "verify": result}
-    )
-
-
-@csrf_exempt
-def paytabs_webhook(request):
-    """
-    PayTabs server-to-server notification (IPN/webhook).
-    بعد استلام أي إشعار، نعمل verify من PayTabs API ونحدث الـ Order.
-    """
-    payload = request.POST.dict() if request.method == "POST" else request.GET.dict()
-    tran_ref = payload.get("tran_ref") or payload.get("transaction_id")
-
-    result = None
-    order = None
-
-    if tran_ref:
-        try:
-            # نتحقق من المعاملة
-            result = verify_transaction(tran_ref)
-
-            logger.info("PayTabs webhook payload: %s", payload)
-            if result:
-                logger.info("PayTabs verified result: %s", result)
-
-            # نجيب الـ order_id من custom_payment_name اللي بعتناه وقت الإنشاء
-            custom = result.get("custom_payment_name") or ""
-            if custom.startswith("UChat-"):
-                order_id = int(custom.split("-")[1])
-                order = Order.objects.filter(pk=order_id).first()
-
+            order = Order.objects.filter(pk=int(result["cart_id"])).first()
             if order:
-                status = result.get("response_status") or result.get(
-                    "payment_result", {}
-                ).get("response_status")
-                if status in ("A", "captured", "Paid", "CAPTURED"):
+                status = result["payment_result"]["response_status"]
+                if status == "A":
+                    workspace_id = change_plan(order)
+                    order.workspace_id = workspace_id
                     order.status = "paid"
                 else:
                     order.status = "failed"
                 order.paytabs_transaction_id = tran_ref
                 order.raw_response = result
                 order.save()
-
         except Exception as e:
             result = {"error": str(e)}
 
-    # نرجع 200 OK عشان PayTabs يعتبر إننا استقبلنا الإشعار
-    return HttpResponse("OK")
+    return render(
+        request,
+        "payments/return.html",
+        {"payload": payload, "verify": result},
+    )

@@ -12,7 +12,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "payments",
+    'mathfilters',
 ]
 
 MIDDLEWARE = [
@@ -124,11 +127,11 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+UCHAT_TOKEN = os.getenv("UCHAT_TOKEN")
+UCHAT_BASE_URL = os.getenv("UCHAT_BASE_URL")
 
-PAYTABS_MERCHANT_EMAIL = os.getenv(
-    "PAYTABS_MERCHANT_EMAIL", "your-merchant@example.com"
-)
-PAYTABS_SECRET_KEY = os.getenv("PAYTABS_SECRET_KEY", "sk_test_xxx")
+PAYTABS_PROFILE_ID = int(os.getenv("PAYTABS_PROFILE_ID", 165996))
+PAYTABS_SERVER_KEY = os.getenv("PAYTABS_SERVER_KEY", "sk_test_xxx")
 PAYTABS_DOMAIN = os.getenv("PAYTABS_DOMAIN", "https://secure.paytabs.com")
 
 PAYTABS_CALLBACK_URL = os.getenv(

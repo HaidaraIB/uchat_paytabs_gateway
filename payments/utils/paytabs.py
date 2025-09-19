@@ -1,44 +1,59 @@
-import requests
 from django.conf import settings
 
+from ..models import Order
 
-def create_pay_page(order, customer):
+import requests
+import json
+
+
+def create_pay_page(order: Order):
     endpoint = f"{settings.PAYTABS_DOMAIN}/payment/request"
 
+    payload = {}
     payload = {
-        "merchant_email": settings.PAYTABS_MERCHANT_EMAIL,
-        "secret_key": settings.PAYTABS_SECRET_KEY,
-        "site_url": settings.PAYTABS_RETURN_URL,
-        "return_url": settings.PAYTABS_RETURN_URL,
-        "cc_first_name": customer.get("first_name"),
-        "cc_last_name": customer.get("last_name"),
-        "cc_email": customer.get("email"),
-        "phone_number": customer.get("phone"),
-        "products_per_title": order.plan.name,
-        "amount": str(order.amount),
-        "currency": order.currency,
+        "profile_id": int(settings.PAYTABS_PROFILE_ID),
+        "tran_type": "sale",
+        "tran_class": "ecom",
+        "cart_id": str(order.id),
+        "cart_description": "Test Order",
+        "cart_currency": "IQD",
+        "cart_amount": float(order.amount),
         "callback": settings.PAYTABS_CALLBACK_URL,
-        "custom_payment_name": f"UChat-{order.id}",
+        "return": settings.PAYTABS_RETURN_URL,
+        "customer_details": {
+            "email": order.owner_email,
+        },
     }
-
-    resp = requests.post(endpoint, json=payload, timeout=15)
+    headers = {
+        "authorization": settings.PAYTABS_SERVER_KEY,
+        "content-type": "application/octet-stream",
+    }
+    resp = requests.post(
+        endpoint,
+        data=json.dumps(payload),
+        headers=headers,
+        timeout=15,
+    )
     resp.raise_for_status()
     return resp.json()
 
 
 def verify_transaction(tran_ref: str):
-    """
-    Verify transaction by transaction reference.
-    Docs: PayTabs PT2 Transaction API
-    """
     endpoint = f"{settings.PAYTABS_DOMAIN}/payment/query"
-
     payload = {
-        "merchant_email": settings.PAYTABS_MERCHANT_EMAIL,
-        "secret_key": settings.PAYTABS_SECRET_KEY,
+        "profile_id": int(settings.PAYTABS_PROFILE_ID),
         "tran_ref": tran_ref,
     }
+    headers = {
+        "authorization": settings.PAYTABS_SERVER_KEY,
+        "content-type": "application/octet-stream",
+    }
 
-    resp = requests.post(endpoint, json=payload, timeout=15)
+    resp = requests.post(
+        endpoint,
+        data=json.dumps(payload),
+        headers=headers,
+        timeout=15,
+    )
     resp.raise_for_status()
     return resp.json()
