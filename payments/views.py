@@ -57,6 +57,17 @@ def checkout(request):
                 is_yearly=plan["is_yearly"],
             )
 
+    current_workspace = requests.get(
+        url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
+        headers={
+            "authorization": f"Bearer {settings.UCHAT_TOKEN}",
+        },
+    ).json()
+    if current_workspace['status'] == "ok":
+        current_workspace["plan"] = current_workspace["plan"].replace("'", "").split(",")
+    else:
+        current_workspace["plan"] = "free"
+
     return render(
         request,
         "payments/checkout.html",
@@ -64,6 +75,7 @@ def checkout(request):
             "workspace_id": workspace_id,
             "owner_email": owner_email,
             "plans": plans,
+            "current_workspace": current_workspace,
         },
     )
 

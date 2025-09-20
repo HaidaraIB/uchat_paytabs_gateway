@@ -22,8 +22,8 @@ class Order(models.Model):
         ("cancelled", "Cancelled"),
     ]
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
-    workspace_id = models.CharField(max_length=255)
-    owner_email = models.CharField(max_length=255)
+    workspace_id = models.CharField(max_length=255, null=True)
+    owner_email = models.CharField(max_length=255, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     paytabs_transaction_id = models.CharField(max_length=255, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
