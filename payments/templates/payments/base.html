@@ -36,6 +36,8 @@
     
         <form action="{% url 'cancel_subscription' %}" method="post" onsubmit="return confirmCancel();">
           {% csrf_token %}
+          <input type="hidden" name="owner_email" value="{{ order.owner_email }}">
+          <input type="hidden" name="workspace_id" value="{{ order.workspace_id }}">
           <button
             type="submit"
             class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition"
@@ -49,6 +51,7 @@
             return confirm("هل أنت متأكد أنك تريد إلغاء الاشتراك والرجوع إلى الخطة المجانية؟");
           }
         </script>
+        
         
       </div>
     </header>
