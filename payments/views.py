@@ -179,5 +179,43 @@ def cancel_subscription(request):
             messages.error(request, "خطأ أثناء إلغاء الاشتراك")
         else:
             messages.success(request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية")
+    
+    plans = requests.get(
+        f"{settings.UCHAT_BASE_URL}/plans",
+        headers={
+            "Authorization": f"Bearer {settings.UCHAT_TOKEN}",
+        },
+    ).json()
 
-    return redirect("success")
+    if plans.get("status", False) == "ok":
+        plans = plans["data"]
+
+    PRICES_DICT = {
+        0: 0,
+        10: 36.6,
+        30: 100,
+        60: 133.3,
+        100: 200,
+        110: 332.6,
+    }
+
+    for plan in plans:
+        plan["price"] = int(float(PRICES_DICT.get(plan["price"], 1000_000)) * 1500)
+
+    current_workspace = requests.get(
+        url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
+        headers={
+            "authorization": f"Bearer {settings.UCHAT_TOKEN}",
+        },
+    ).json()
+    
+    return render(
+        request,
+        "payments/checkout.html",
+        {
+            "workspace_id": workspace_id,
+            "owner_email": owner_email,
+            "plans": plans,
+            "current_workspace": current_workspace,
+        },
+    )
