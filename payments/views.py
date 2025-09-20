@@ -2,6 +2,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.contrib import messages
+
 
 from .models import Plan, Order
 from .utils.paytabs import create_pay_page, verify_transaction
@@ -63,8 +65,10 @@ def checkout(request):
             "authorization": f"Bearer {settings.UCHAT_TOKEN}",
         },
     ).json()
-    if current_workspace['status'] == "ok":
-        current_workspace["plan"] = current_workspace["plan"].replace("'", "").split(",")
+    if current_workspace["status"] == "ok":
+        current_workspace["plan"] = (
+            current_workspace["plan"].replace("'", "").split(",")
+        )
     else:
         current_workspace["plan"] = "free"
 
@@ -91,7 +95,11 @@ def subscribe(request, plan_id):
         owner_email=owner_email,
     )
     if plan.price == 0:
-        workspace_id = change_plan(order=order)
+        workspace_id = change_plan(
+            owner_email=order.owner_email,
+            workspace_id=order.workspace_id,
+            plan_id=order.plan.plan_id,
+        )
         order.workspace_id = workspace_id
         order.status = "paid"
         order.save()
@@ -129,7 +137,11 @@ def paytabs_return(request):
             if order:
                 status = result["payment_result"]["response_status"]
                 if status == "A":
-                    workspace_id = change_plan(order)
+                    workspace_id = change_plan(
+                        owner_email=order.owner_email,
+                        workspace_id=order.workspace_id,
+                        plan_id=order.plan.plan_id,
+                    )
                     order.workspace_id = workspace_id
                     order.status = "paid"
                 else:
@@ -145,3 +157,20 @@ def paytabs_return(request):
         "payments/return.html",
         {"payload": payload, "verify": result},
     )
+
+
+def cancel_subscription(request):
+    if request.method == "POST":
+        owner_email = request.POST.get("owner_email")
+        workspace_id = request.POST.get("workspace_id")
+        free_plan_id = Plan.objects.filter(plan_id="free")
+        change_plan(
+            owner_email=owner_email,
+            workspace_id=workspace_id,
+            plan_id=free_plan_id,
+        )
+        messages.success(
+            request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية"
+        )
+
+    return redirect("success")

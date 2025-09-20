@@ -3,9 +3,9 @@ from django.conf import settings
 import requests
 
 
-def change_plan(order: Order):
+def change_plan(workspace_id: int, owner_email: str, plan_id: int):
     workspace = requests.get(
-        url=f"{settings.UCHAT_BASE_URL}/workspace/{order.workspace_id}",
+        url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
         headers={
             "authorization": f"Bearer {settings.UCHAT_TOKEN}",
         },
@@ -14,9 +14,9 @@ def change_plan(order: Order):
         workspace = requests.post(
             url=f"{settings.UCHAT_BASE_URL}/workspace/create-for-existing-user",
             json={
-                "email": order.owner_email,
-                "team_name": order.owner_email,
-                "template_ns": order.owner_email,
+                "email": owner_email,
+                "team_name": owner_email,
+                "template_ns": owner_email,
                 "trial_days": 14,
             },
             headers={
@@ -30,7 +30,7 @@ def change_plan(order: Order):
     requests.post(
         url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}/change_plan",
         json={
-            "plan": order.plan.plan_id,
+            "plan": plan_id,
         },
         headers={
             "authorization": f"Bearer {settings.UCHAT_TOKEN}",

@@ -21,19 +21,38 @@
   <body class="bg-gray-50 text-gray-800">
     <header class="bg-white shadow-sm">
       <div class="container flex items-center justify-between py-4">
+        <!-- Left side: logo + title -->
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center text-white font-bold"
           >
-            U
+            M
           </div>
           <div>
             <h1 class="text-lg font-semibold">Mujeb</h1>
             <p class="text-sm text-gray-500">الاشتراك & الدفع</p>
           </div>
         </div>
+    
+        <form action="{% url 'cancel_subscription' %}" method="post" onsubmit="return confirmCancel();">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition"
+          >
+            إلغاء الاشتراك
+          </button>
+        </form>
+        
+        <script>
+          function confirmCancel() {
+            return confirm("هل أنت متأكد أنك تريد إلغاء الاشتراك والرجوع إلى الخطة المجانية؟");
+          }
+        </script>
+        
       </div>
     </header>
+    
 
     <main class="container mt-8">{% block content %}{% endblock %}</main>
 
