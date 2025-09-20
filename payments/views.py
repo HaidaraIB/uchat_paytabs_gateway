@@ -209,6 +209,13 @@ def cancel_subscription(request):
         },
     ).json()
     
+    if current_workspace["status"] == "ok":
+        current_workspace["plan"] = (
+            current_workspace["plan"].replace("'", "").split(",")
+        )
+    else:
+        current_workspace["plan"] = "free"
+    
     return render(
         request,
         "payments/checkout.html",
