@@ -4,12 +4,15 @@ import requests
 
 
 def change_plan(workspace_id: int, owner_email: str, plan_id: int):
-    workspace = requests.get(
-        url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
-        headers={
-            "authorization": f"Bearer {settings.UCHAT_TOKEN}",
-        },
-    ).json()
+    try:
+        workspace = requests.get(
+            url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
+            headers={
+                "authorization": f"Bearer {settings.UCHAT_TOKEN}",
+            },
+        ).json()
+    except:
+        return False
     if not (workspace.get("status", False) == "ok"):
         workspace = requests.post(
             url=f"{settings.UCHAT_BASE_URL}/workspace/create-for-existing-user",
@@ -24,8 +27,7 @@ def change_plan(workspace_id: int, owner_email: str, plan_id: int):
             },
         ).json()
         if not (workspace.get("status", False) == "ok"):
-            # TODO error
-            return
+            return False
     workspace_id = workspace["data"]["id"]
     requests.post(
         url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}/change_plan",

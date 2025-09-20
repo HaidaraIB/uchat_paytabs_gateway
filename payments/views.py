@@ -100,6 +100,9 @@ def subscribe(request, plan_id):
             workspace_id=order.workspace_id,
             plan_id=order.plan.plan_id,
         )
+        if not workspace_id:
+            # TODO error
+            return
         order.workspace_id = workspace_id
         order.status = "paid"
         order.save()
@@ -142,6 +145,9 @@ def paytabs_return(request):
                         workspace_id=order.workspace_id,
                         plan_id=order.plan.plan_id,
                     )
+                    if not workspace_id:
+                        # TODO error
+                        return
                     order.workspace_id = workspace_id
                     order.status = "paid"
                 else:
@@ -164,13 +170,14 @@ def cancel_subscription(request):
         owner_email = request.POST.get("owner_email")
         workspace_id = request.POST.get("workspace_id")
         free_plan_id = Plan.objects.filter(plan_id="free")
-        change_plan(
+        workspace_id = change_plan(
             owner_email=owner_email,
             workspace_id=workspace_id,
             plan_id=free_plan_id,
         )
-        messages.success(
-            request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية"
-        )
+        if not workspace_id:
+            messages.error(request, "خطأ أثناء إلغاء الاشتراك")
+        else:
+            messages.success(request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية")
 
     return redirect("success")
