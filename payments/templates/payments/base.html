@@ -34,7 +34,7 @@
           </div>
         </div>
     
-        <form action="{% url 'cancel_subscription' %}" method="post" onsubmit="return confirmCancel();">
+        <form action="{% url 'payments:cancel_subscription' %}" method="post" onsubmit="return confirmCancel();">
           {% csrf_token %}
           <input type="hidden" name="owner_email" value="{{ order.owner_email }}">
           <input type="hidden" name="workspace_id" value="{{ order.workspace_id }}">
