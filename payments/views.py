@@ -39,7 +39,7 @@ def checkout(request):
     }
 
     for plan in plans:
-        plan["price"] = int(float(PRICES_DICT.get(plan["price"], 1000_000)) * 1500)
+        plan["price"] = PRICES_DICT.get(plan["price"], 1000_000)
         p = Plan.objects.filter(pk=plan["id"])
         if p:
             p.update(
