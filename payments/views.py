@@ -39,7 +39,7 @@ def checkout(request):
     }
 
     for plan in plans:
-        plan["price"] = PRICES_DICT.get(plan["price"], 1000_000)
+        plan["price"] = int(PRICES_DICT.get(plan["price"], 1000_000))
         p = Plan.objects.filter(pk=plan["id"])
         if p:
             p.update(
@@ -200,7 +200,7 @@ def cancel_subscription(request):
     }
 
     for plan in plans:
-        plan["price"] = PRICES_DICT.get(plan["price"], 1000_000)
+        plan["price"] = int(PRICES_DICT.get(plan["price"], 1000_000))
 
     current_workspace = requests.get(
         url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
