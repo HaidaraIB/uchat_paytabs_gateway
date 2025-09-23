@@ -27,7 +27,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "payment.mujeb.app", "www.payment.mujeb.app", "127.0.0.1"]
 
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize"
     "payments",
 ]
 
@@ -142,25 +143,36 @@ PAYTABS_RETURN_URL = os.getenv(
     "PAYTABS_RETURN_URL", "http://127.0.0.1:8000/payments/paytabs_return/"
 )
 
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
-        "file": {
+        "error_file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": "/var/www/uchat_paytabs_gateway/error.log",
+        },
+        "payments_file": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": "./paytabs.log",
+            "filename": "/var/www/uchat_paytabs_gateway/payments.log",
         },
         "console": {
             "class": "logging.StreamHandler",
         },
     },
     "loggers": {
+        "django.request": {
+            "handlers": ["error_file", "console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
         "payments": {
-            "handlers": ["file", "console"],
+            "handlers": ["payments_file", "console"],
             "level": "INFO",
             "propagate": False,
         },
     },
 }
+
+APPEND_SLASH = False
