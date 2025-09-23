@@ -30,9 +30,11 @@ def checkout(request):
         plans = plans["data"]
 
     for plan in plans:
-        plan["price"] = int(
-            Prices.objects.filter(usd_price=plan["price"]).first().iqd_price or 1000_000
-        )
+        logger.info("Plan: %s", plan)
+        plan_price = Prices.objects.filter(usd_price=plan["price"]).first()
+        logger.info("Plan Price: %s", plan_price)
+        plan["price"] = int(plan_price.iqd_price) if plan_price else 1000_000
+        logger.info("Plan %s Price Updated: %s", plan["id"], plan["price"])
         p = Plan.objects.filter(pk=plan["id"])
         if p:
             p.update(
@@ -42,6 +44,7 @@ def checkout(request):
                 members=plan["members"],
                 is_yearly=plan["is_yearly"],
             )
+            logger.info("Plan Updated: %s", plan["id"])
         else:
             Plan.objects.create(
                 plan_id=plan["id"],
@@ -51,6 +54,7 @@ def checkout(request):
                 members=plan["members"],
                 is_yearly=plan["is_yearly"],
             )
+            logger.info("New Plan: %s", plan["id"])
 
     current_workspace = requests.get(
         url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
