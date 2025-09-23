@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Plan, Order
+from .models import Plan, Order, Prices
 
 
 @admin.register(Plan)
@@ -12,3 +12,8 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ("id", "plan", "amount", "status", "created_at")
     list_filter = ("status",)
     search_fields = ("id", "plan__name")
+
+
+@admin.register(Prices)
+class PricesAdmin(admin.ModelAdmin):
+    list_display = ("usd_price", "iqd_price")

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 
 
-from .models import Plan, Order
+from .models import Plan, Order, Prices
 from .utils.paytabs import create_pay_page, verify_transaction
 from .utils.uchat import change_plan
 
@@ -29,17 +29,10 @@ def checkout(request):
     if plans.get("status", False) == "ok":
         plans = plans["data"]
 
-    PRICES_DICT = {
-        0: 0,
-        10: 55000,
-        30: 149000,
-        60: 199000,
-        100: 299000,
-        110: 499000,
-    }
-
     for plan in plans:
-        plan["price"] = int(PRICES_DICT.get(plan["price"], 1000_000))
+        plan["price"] = int(
+            Prices.objects.filter(usd_price=plan["price"]).first().iqd_price or 1000_000
+        )
         p = Plan.objects.filter(pk=plan["id"])
         if p:
             p.update(
@@ -179,7 +172,7 @@ def cancel_subscription(request):
             messages.error(request, "خطأ أثناء إلغاء الاشتراك")
         else:
             messages.success(request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية")
-    
+
     plans = requests.get(
         f"{settings.UCHAT_BASE_URL}/plans",
         headers={
@@ -190,17 +183,10 @@ def cancel_subscription(request):
     if plans.get("status", False) == "ok":
         plans = plans["data"]
 
-    PRICES_DICT = {
-        0: 0,
-        10: 55000,
-        30: 149000,
-        60: 199000,
-        100: 299000,
-        110: 499000,
-    }
-
     for plan in plans:
-        plan["price"] = int(PRICES_DICT.get(plan["price"], 1000_000))
+        plan["price"] = int(
+            Prices.objects.filter(usd_price=plan["price"]).first().iqd_price or 1000_000
+        )
 
     current_workspace = requests.get(
         url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
@@ -208,14 +194,14 @@ def cancel_subscription(request):
             "authorization": f"Bearer {settings.UCHAT_TOKEN}",
         },
     ).json()
-    
+
     if current_workspace["status"] == "ok":
         current_workspace["plan"] = (
             current_workspace["plan"].replace("'", "").split(",")
         )
     else:
         current_workspace["plan"] = "free"
-    
+
     return render(
         request,
         "payments/checkout.html",
