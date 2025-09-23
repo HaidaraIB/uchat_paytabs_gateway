@@ -4,7 +4,7 @@ from .models import Plan, Order, Prices
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ("name", "price", "members", "bot_users")
+    list_display = ("plan_id", "name", "price", "members", "bot_users")
 
 
 @admin.register(Order)

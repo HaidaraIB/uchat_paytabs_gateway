@@ -30,11 +30,8 @@ def checkout(request):
         plans = plans["data"]
 
     for plan in plans:
-        logger.info("Plan: %s", plan)
         plan_price = Prices.objects.filter(usd_price=plan["price"]).first()
-        logger.info("Plan Price: %s", plan_price)
         plan["price"] = int(plan_price.iqd_price) if plan_price else 1000_000
-        logger.info("Plan %s Price Updated: %s", plan["id"], plan["price"])
         p = Plan.objects.filter(pk=plan["id"])
         if p:
             p.update(

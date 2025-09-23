@@ -11,7 +11,7 @@ class Plan(models.Model):
     is_yearly = models.BooleanField()
 
     def __str__(self):
-        return f"Plan ${self.id} {self.name} ({self.price})"
+        return f"Plan ${self.plan_id} {self.name} ({self.price})"
 
 
 class Order(models.Model):
