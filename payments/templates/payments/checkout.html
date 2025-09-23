@@ -43,7 +43,7 @@
 
     <div class="mt-6">
       {% if plan.id|lower != "free" and plan.id not in current_workspace.plan %}
-        <a href="{% url 'payments:subscribe' plan.id %}?workspace_id={{ workspace_id }}&owner_email={{ owner_email }}"
+        <a href="{% url 'payments:subscribe' plan.id %}?workspaceID={{ workspace_id }}&ownerEmail={{ owner_email }}"
           class="block text-center w-full inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded">
           اشترك الآن
         </a>

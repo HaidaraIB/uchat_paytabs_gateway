@@ -16,8 +16,8 @@ logger = logging.getLogger("payments")
 
 
 def checkout(request):
-    workspace_id = request.GET.get("workspace_id")
-    owner_email = request.GET.get("owner_email")
+    workspace_id = request.GET.get("workspaceID")
+    owner_email = request.GET.get("ownerEmail")
 
     plans = requests.get(
         f"{settings.UCHAT_BASE_URL}/plans",
@@ -31,7 +31,7 @@ def checkout(request):
 
     PRICES_DICT = {
         0: 0,
-        10: 55000,
+        10: 1000,
         30: 149000,
         60: 199000,
         100: 299000,
@@ -67,7 +67,7 @@ def checkout(request):
     ).json()
     if current_workspace["status"] == "ok":
         current_workspace["plan"] = (
-            current_workspace["plan"].replace("'", "").split(",")
+            current_workspace["data"]["plan"].replace("'", "").split(",")
         )
     else:
         current_workspace["plan"] = "free"
@@ -85,8 +85,8 @@ def checkout(request):
 
 
 def subscribe(request, plan_id):
-    workspace_id = request.GET.get("workspace_id")
-    owner_email = request.GET.get("owner_email")
+    workspace_id = request.GET.get("workspaceID")
+    owner_email = request.GET.get("ownerEmail")
     plan = get_object_or_404(Plan, plan_id=plan_id)
     order = Order.objects.create(
         plan=plan,
@@ -94,6 +94,7 @@ def subscribe(request, plan_id):
         workspace_id=workspace_id,
         owner_email=owner_email,
     )
+    logger.info("New Order: %s", order)
     if plan.price == 0:
         workspace_id = change_plan(
             owner_email=order.owner_email,
@@ -124,7 +125,13 @@ def subscribe(request, plan_id):
 @csrf_exempt
 def paytabs_return(request):
     payload = request.POST.dict() if request.method == "POST" else request.GET.dict()
-    tran_ref = payload.get("tran_ref") or payload.get("transaction_id")
+    tran_ref = (
+        payload.get("tran_ref")
+        or payload.get("transaction_id")
+        or payload.get("tranRef")
+        or payload.get("transactionID")
+        or payload.get("transactionId")
+    )
 
     logger.info("PayTabs return payload: %s", payload)
 
@@ -161,14 +168,17 @@ def paytabs_return(request):
     return render(
         request,
         "payments/return.html",
-        {"payload": payload, "verify": result},
+        {
+            "payload": payload,
+            "verify": result,
+        },
     )
 
 
 def cancel_subscription(request):
     if request.method == "POST":
-        owner_email = request.POST.get("owner_email")
-        workspace_id = request.POST.get("workspace_id")
+        workspace_id = request.GET.get("workspaceID")
+        owner_email = request.GET.get("ownerEmail")
         free_plan_id = Plan.objects.filter(plan_id="free")
         workspace_id = change_plan(
             owner_email=owner_email,
@@ -179,7 +189,7 @@ def cancel_subscription(request):
             messages.error(request, "خطأ أثناء إلغاء الاشتراك")
         else:
             messages.success(request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية")
-    
+
     plans = requests.get(
         f"{settings.UCHAT_BASE_URL}/plans",
         headers={
@@ -192,7 +202,7 @@ def cancel_subscription(request):
 
     PRICES_DICT = {
         0: 0,
-        10: 55000,
+        10: 1000,
         30: 149000,
         60: 199000,
         100: 299000,
@@ -208,14 +218,14 @@ def cancel_subscription(request):
             "authorization": f"Bearer {settings.UCHAT_TOKEN}",
         },
     ).json()
-    
+
     if current_workspace["status"] == "ok":
         current_workspace["plan"] = (
             current_workspace["plan"].replace("'", "").split(",")
         )
     else:
         current_workspace["plan"] = "free"
-    
+
     return render(
         request,
         "payments/checkout.html",
