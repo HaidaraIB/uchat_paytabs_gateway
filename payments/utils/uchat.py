@@ -45,8 +45,9 @@ def change_plan(workspace_id: int, owner_email: str, plan_id: str):
     )
     change_plan_res = safe_json(response)
     logger.info("Change Plan Response: %s", change_plan_res)
-
-    return workspace_id
+    if change_plan_res.get("status", None) == "ok":
+        return workspace_id
+    return False
 
 
 def safe_json(response: requests.Response):
@@ -59,4 +60,4 @@ def safe_json(response: requests.Response):
             response.status_code,
             response.text,
         )
-        return None
+        return {}

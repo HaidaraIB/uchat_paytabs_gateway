@@ -95,11 +95,11 @@ def subscribe(request, plan_id):
             workspace_id=order.workspace_id,
             plan_id=order.plan.plan_id,
         )
-        if not workspace_id:
-            # TODO error
-            return
-        order.workspace_id = workspace_id
-        order.status = "paid"
+        if workspace_id:
+            order.workspace_id = workspace_id
+            order.status = "paid"
+        else:
+            order.status = "error"
         order.save()
         return render(
             request,
