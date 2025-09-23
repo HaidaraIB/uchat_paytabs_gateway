@@ -1,14 +1,16 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib import messages
+from django.urls import reverse
 
 
 from .models import Plan, Order, Prices
 from .utils.paytabs import create_pay_page, verify_transaction
 from .utils.uchat import change_plan
 
+import json
 import requests
 import logging
 
@@ -41,7 +43,6 @@ def checkout(request):
                 members=plan["members"],
                 is_yearly=plan["is_yearly"],
             )
-            logger.info("Plan Updated: %s", plan["id"])
         else:
             Plan.objects.create(
                 plan_id=plan["id"],
@@ -51,7 +52,6 @@ def checkout(request):
                 members=plan["members"],
                 is_yearly=plan["is_yearly"],
             )
-            logger.info("New Plan: %s", plan["id"])
 
     current_workspace = requests.get(
         url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
@@ -101,7 +101,15 @@ def subscribe(request, plan_id):
         order.workspace_id = workspace_id
         order.status = "paid"
         order.save()
-        return render(request, "payments/success.html", {"order": order, "plan": plan})
+        return render(
+            request,
+            "payments/success.html",
+            {
+                "workspace_id": workspace_id,
+                "owner_email": owner_email,
+                "plan": plan,
+            },
+        )
 
     data = create_pay_page(order)
     order.raw_response = data
@@ -111,58 +119,81 @@ def subscribe(request, plan_id):
         data.get("redirect_url") or data.get("payment_url") or data.get("payment_link")
     )
     if redirect_url:
+        logger.info("Redirecting to pay page for order: %s", order.id)
         return redirect(redirect_url)
 
     return HttpResponse("Error creating payment session")
 
 
 @csrf_exempt
+def paytabs_callback(request):
+    try:
+        # Parse JSON body (PayTabs sends JSON, not form-encoded)
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = request.POST.dict() or request.GET.dict()
+
+    tran_ref = payload.get("tran_ref") or payload.get("tranRef")
+
+    logger.info("PayTabs callback payload: %s", payload)
+
+    if not tran_ref:
+        return JsonResponse({"error": "Missing tran_ref"}, status=400)
+
+    result = verify_transaction(tran_ref)
+    logger.info("PayTabs verified result: %s", result)
+
+    order = Order.objects.filter(pk=int(result["cart_id"])).first()
+    if not order:
+        return JsonResponse({"error": "Order not found"}, status=404)
+
+    status = result["payment_result"]["response_status"]
+    if status == "A":  # Approved
+        workspace_id = change_plan(
+            owner_email=order.owner_email,
+            workspace_id=order.workspace_id,
+            plan_id=order.plan.plan_id,
+        )
+        if workspace_id:
+            order.workspace_id = workspace_id
+            order.status = "paid"
+        else:
+            order.status = "error"
+    else:
+        order.status = "failed"
+
+    order.paytabs_transaction_id = tran_ref
+    order.raw_response = result
+    order.save()
+
+    return JsonResponse({"status": "ok"})
+
+
+@csrf_exempt
 def paytabs_return(request):
-    payload = request.POST.dict() if request.method == "POST" else request.GET.dict()
-    tran_ref = (
-        payload.get("tran_ref")
-        or payload.get("transaction_id")
-        or payload.get("tranRef")
-        or payload.get("transactionID")
-        or payload.get("transactionId")
-    )
+    try:
+        # Parse JSON body (PayTabs sends JSON, not form-encoded)
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = request.POST.dict() or request.GET.dict()
 
-    logger.info("PayTabs return payload: %s", payload)
+    tran_ref = payload.get("tran_ref") or payload.get("tranRef")
 
-    order = None
-    result = None
-    if tran_ref:
-        try:
-            result = verify_transaction(tran_ref)
-            if result:
-                logger.info("PayTabs verified result: %s", result)
+    if not tran_ref:
+        return JsonResponse({"error": "Missing tran_ref"}, status=400)
 
-            order = Order.objects.filter(pk=int(result["cart_id"])).first()
-            if order:
-                status = result["payment_result"]["response_status"]
-                if status == "A":
-                    workspace_id = change_plan(
-                        owner_email=order.owner_email,
-                        workspace_id=order.workspace_id,
-                        plan_id=order.plan.plan_id,
-                    )
-                    if not workspace_id:
-                        # TODO error
-                        return
-                    order.workspace_id = workspace_id
-                    order.status = "paid"
-                else:
-                    order.status = "failed"
-                order.paytabs_transaction_id = tran_ref
-                order.raw_response = result
-                order.save()
-        except Exception as e:
-            result = {"error": str(e)}
+    result = verify_transaction(tran_ref)
+
+    order = Order.objects.filter(pk=int(result["cart_id"])).first()
+    if not order:
+        return JsonResponse({"error": "Order not found"}, status=404)
 
     return render(
         request,
         "payments/return.html",
         {
+            "workspace_id": order.workspace_id,
+            "owner_email": order.owner_email,
             "payload": payload,
             "verify": result,
         },
@@ -171,55 +202,27 @@ def paytabs_return(request):
 
 def cancel_subscription(request):
     if request.method == "POST":
-        workspace_id = request.GET.get("workspaceID")
-        owner_email = request.GET.get("ownerEmail")
-        free_plan_id = Plan.objects.filter(plan_id="free")
-        workspace_id = change_plan(
+        owner_email = request.POST.get("ownerEmail")
+        workspace_id = request.POST.get("workspaceID")
+
+        success = change_plan(
             owner_email=owner_email,
             workspace_id=workspace_id,
-            plan_id=free_plan_id,
+            plan_id="free",
         )
-        if not workspace_id:
+
+        if not success:
             messages.error(request, "خطأ أثناء إلغاء الاشتراك")
         else:
             messages.success(request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية")
 
-    plans = requests.get(
-        f"{settings.UCHAT_BASE_URL}/plans",
-        headers={
-            "Authorization": f"Bearer {settings.UCHAT_TOKEN}",
-        },
-    ).json()
-
-    if plans.get("status", False) == "ok":
-        plans = plans["data"]
-
-    for plan in plans:
-        plan["price"] = int(
-            Prices.objects.filter(usd_price=plan["price"]).first().iqd_price or 1000_000
+        # ✅ redirect back to checkout with original params
+        checkout_url = (
+            reverse("payments:plans")
+            + f"?workspaceID={workspace_id}&ownerEmail={owner_email}"
         )
-
-    current_workspace = requests.get(
-        url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}",
-        headers={
-            "authorization": f"Bearer {settings.UCHAT_TOKEN}",
-        },
-    ).json()
-
-    if current_workspace["status"] == "ok":
-        current_workspace["plan"] = (
-            current_workspace["plan"].replace("'", "").split(",")
-        )
-    else:
-        current_workspace["plan"] = "free"
-
-    return render(
-        request,
-        "payments/checkout.html",
-        {
-            "workspace_id": workspace_id,
-            "owner_email": owner_email,
-            "plans": plans,
-            "current_workspace": current_workspace,
-        },
-    )
+        return redirect(checkout_url)
+    
+    # fallback for GET or bad request
+    messages.error(request, "طلب غير صالح")
+    return HttpResponse("Bad Request")

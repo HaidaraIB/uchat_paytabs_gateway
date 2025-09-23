@@ -38,8 +38,8 @@
     
         <form action="{% url 'payments:cancel_subscription' %}" method="post" onsubmit="return confirmCancel();">
           {% csrf_token %}
-          <input type="hidden" name="owner_email" value="{{ order.owner_email }}">
-          <input type="hidden" name="workspace_id" value="{{ order.workspace_id }}">
+          <input type="hidden" name="ownerEmail" value="{{ owner_email }}">
+          <input type="hidden" name="workspaceID" value="{{ workspace_id }}">
           <button
             type="submit"
             class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition"
@@ -66,3 +66,26 @@
     </footer>
   </body>
 </html>
+
+{% if messages %}
+<div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50">
+  {% for message in messages %}
+    <div
+      class="px-4 py-2 rounded-lg shadow-lg text-white
+        {% if message.tags == 'success' %} bg-green-500
+        {% elif message.tags == 'error' %} bg-red-500
+        {% else %} bg-gray-800 {% endif %}"
+    >
+      {{ message }}
+    </div>
+  {% endfor %}
+</div>
+
+<script>
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    const container = document.getElementById("toast-container");
+    if (container) container.remove();
+  }, 3000);
+</script>
+{% endif %}

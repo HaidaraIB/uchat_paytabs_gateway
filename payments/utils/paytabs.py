@@ -32,7 +32,6 @@ def create_pay_page(order: Order):
         endpoint,
         data=json.dumps(payload),
         headers=headers,
-        timeout=15,
     )
     resp.raise_for_status()
     return resp.json()
@@ -53,7 +52,6 @@ def verify_transaction(tran_ref: str):
         endpoint,
         data=json.dumps(payload),
         headers=headers,
-        timeout=15,
     )
     resp.raise_for_status()
     return resp.json()
