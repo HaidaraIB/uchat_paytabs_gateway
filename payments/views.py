@@ -21,6 +21,9 @@ def checkout(request):
     workspace_id = request.GET.get("workspaceID")
     owner_email = request.GET.get("ownerEmail")
 
+    if not owner_email or not workspace_id:
+        return render(request, "payments/missing_info.html")
+
     plans = requests.get(
         f"{settings.UCHAT_BASE_URL}/plans",
         headers={
@@ -82,6 +85,10 @@ def subscribe(request, plan_id):
     workspace_id = request.GET.get("workspaceID")
     owner_email = request.GET.get("ownerEmail")
     plan = get_object_or_404(Plan, plan_id=plan_id)
+
+    if not owner_email or not workspace_id:
+        return render(request, "payments/missing_info.html")
+    
     order = Order.objects.create(
         plan=plan,
         amount=plan.price,
@@ -204,6 +211,9 @@ def cancel_subscription(request):
     if request.method == "POST":
         owner_email = request.POST.get("ownerEmail")
         workspace_id = request.POST.get("workspaceID")
+
+        if not owner_email or not workspace_id:
+            return render(request, "payments/missing_info.html")
 
         success = change_plan(
             owner_email=owner_email,

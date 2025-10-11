@@ -36,6 +36,7 @@
         </div>
       </div>
     
+      {% if owner_email and workspace_id %}
         <form action="{% url 'payments:cancel_subscription' %}" method="post" onsubmit="return confirmCancel();">
           {% csrf_token %}
           <input type="hidden" name="ownerEmail" value="{{ owner_email }}">
@@ -47,6 +48,8 @@
             إلغاء الاشتراك
           </button>
         </form>
+      {% endif %}
+    
         
         <script>
           function confirmCancel() {
