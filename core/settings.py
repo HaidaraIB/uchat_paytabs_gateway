@@ -132,27 +132,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 UCHAT_TOKEN = os.getenv("UCHAT_TOKEN")
 UCHAT_BASE_URL = os.getenv("UCHAT_BASE_URL")
 
-PAYTABS_PROFILE_ID = int(os.getenv("PAYTABS_PROFILE_ID", 165996))
-PAYTABS_SERVER_KEY = os.getenv("PAYTABS_SERVER_KEY", "sk_test_xxx")
-PAYTABS_DOMAIN = os.getenv("PAYTABS_DOMAIN", "https://secure.paytabs.com")
+PAYTABS_PROFILE_ID = int(os.getenv("PAYTABS_PROFILE_ID"))
+PAYTABS_SERVER_KEY = os.getenv("PAYTABS_SERVER_KEY")
+PAYTABS_DOMAIN = os.getenv("PAYTABS_DOMAIN")
 
-PAYTABS_CALLBACK_URL = os.getenv(
-    "PAYTABS_CALLBACK_URL", "http://127.0.0.1:8000/payments/paytabs_webhook/"
-)
-PAYTABS_RETURN_URL = os.getenv(
-    "PAYTABS_RETURN_URL", "http://127.0.0.1:8000/payments/paytabs_return/"
-)
+PAYTABS_CALLBACK_URL = os.getenv("PAYTABS_CALLBACK_URL")
+PAYTABS_RETURN_URL = os.getenv("PAYTABS_RETURN_URL")
 
 # Email Configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "hassan.alsaadi8@gmail.com")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
 
 LOGGING = {
