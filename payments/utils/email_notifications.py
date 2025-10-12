@@ -24,7 +24,7 @@ def send_payment_success_email(order):
         # Render HTML email
         html_message = render_to_string('payments/emails/payment_success.html', context)
         plain_message = strip_tags(html_message)
-        
+
         # Send email to customer
         send_mail(
             subject=subject,
