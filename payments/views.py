@@ -9,6 +9,12 @@ from django.urls import reverse
 from .models import Plan, Order, Prices
 from .utils.paytabs import create_pay_page, verify_transaction
 from .utils.uchat import change_plan
+from .utils.email_notifications import (
+    send_payment_success_email,
+    send_payment_failed_email,
+    send_subscription_cancelled_email,
+    send_new_order_email,
+)
 
 import json
 import requests
@@ -96,6 +102,9 @@ def subscribe(request, plan_id):
         owner_email=owner_email,
     )
     logger.info("New Order: %s", order)
+    
+    # Send new order notification email
+    send_new_order_email(order)
     if plan.price == 0:
         workspace_id = change_plan(
             owner_email=order.owner_email,
@@ -105,8 +114,12 @@ def subscribe(request, plan_id):
         if workspace_id:
             order.workspace_id = workspace_id
             order.status = "paid"
+            # Send payment success email for free plan
+            send_payment_success_email(order)
         else:
             order.status = "error"
+            # Send payment failed email for free plan error
+            send_payment_failed_email(order)
         order.save()
         return render(
             request,
@@ -164,10 +177,16 @@ def paytabs_callback(request):
         if workspace_id:
             order.workspace_id = workspace_id
             order.status = "paid"
+            # Send payment success email
+            send_payment_success_email(order)
         else:
             order.status = "error"
+            # Send payment failed email for plan change error
+            send_payment_failed_email(order)
     else:
         order.status = "failed"
+        # Send payment failed email
+        send_payment_failed_email(order)
 
     order.paytabs_transaction_id = tran_ref
     order.raw_response = result
@@ -225,6 +244,8 @@ def cancel_subscription(request):
             messages.error(request, "خطأ أثناء إلغاء الاشتراك")
         else:
             messages.success(request, "تم إلغاء اشتراكك والرجوع إلى الخطة المجانية")
+            # Send subscription cancellation email
+            send_subscription_cancelled_email(owner_email, workspace_id)
 
         # ✅ redirect back to checkout with original params
         checkout_url = (
