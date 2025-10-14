@@ -13,7 +13,6 @@ from .utils.email_notifications import (
     send_payment_success_email,
     send_payment_failed_email,
     send_subscription_cancelled_email,
-    send_new_order_email,
 )
 
 import json
@@ -104,7 +103,6 @@ def subscribe(request, plan_id):
     logger.info("New Order: %s", order)
     
     # Send new order notification email
-    send_new_order_email(order)
     if plan.price == 0:
         workspace_id = change_plan(
             owner_email=order.owner_email,
