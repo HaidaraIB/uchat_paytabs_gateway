@@ -141,7 +141,7 @@ PAYTABS_RETURN_URL = os.getenv("PAYTABS_RETURN_URL")
 
 # Email Configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
@@ -154,19 +154,30 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "utf8_formatter": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "encoding": "utf-8",
+        },
+    },
     "handlers": {
         "error_file": {
             "level": "ERROR",
             "class": "logging.FileHandler",
-            "filename": "/var/www/uchat_paytabs_gateway/error.log",
+            "filename": BASE_DIR / "error.log",
+            "encoding": "utf-8",
+            "formatter": "utf8_formatter",
         },
         "payments_file": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": "/var/www/uchat_paytabs_gateway/payments.log",
+            "filename": BASE_DIR / "payments.log",
+            "encoding": "utf-8",
+            "formatter": "utf8_formatter",
         },
         "console": {
             "class": "logging.StreamHandler",
+            "formatter": "utf8_formatter",
         },
     },
     "loggers": {
