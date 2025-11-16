@@ -48,15 +48,15 @@ def change_plan(workspace_id: int, owner_email: str, plan_id: str):
 
     if change_plan_res.get("status", None) == "ok":
 
-        # Auto renew
-        response = requests.post(
-            url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}/enable-auto-renew",
-            headers={
-                "authorization": f"Bearer {settings.UCHAT_TOKEN}",
-            },
-        )
-        auto_renew_res = safe_json(response)
-        logger.info("Auto Renew Response: %s", auto_renew_res)
+        # # Auto renew
+        # response = requests.post(
+        #     url=f"{settings.UCHAT_BASE_URL}/workspace/{workspace_id}/enable-auto-renew",
+        #     headers={
+        #         "authorization": f"Bearer {settings.UCHAT_TOKEN}",
+        #     },
+        # )
+        # auto_renew_res = safe_json(response)
+        # logger.info("Auto Renew Response: %s", auto_renew_res)
 
         return workspace_id
     return False
